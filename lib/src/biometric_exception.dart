@@ -1,6 +1,3 @@
-import 'package:local_auth/local_auth.dart';
-
-// Enum internal untuk mengelompokkan jenis error
 enum BiometricErrorCode {
   noBiometricHardware,
   notEnrolled,
@@ -11,7 +8,6 @@ enum BiometricErrorCode {
   unknown,
 }
 
-// Custom Exception Class
 class BiometricException implements Exception {
   final BiometricErrorCode code;
   final String message;
@@ -23,45 +19,46 @@ class BiometricException implements Exception {
     required this.userMessage,
   });
 
-  // Pabrik konversi: Error OS -> Custom Model
-  factory BiometricException.fromLocalAuthException(LocalAuthException e) {
-    switch (e.code) {
-      case LocalAuthExceptionCode.noBiometricHardware:
-        return BiometricException(
-          code: BiometricErrorCode.noBiometricHardware,
-          message: e.message ?? '',
-          userMessage: 'Perangkat tidak memiliki sensor biometrik.',
-        );
-      case LocalAuthExceptionCode.noBiometricsEnrolled:
-        return BiometricException(
-          code: BiometricErrorCode.notEnrolled,
-          message: e.message ?? '',
-          userMessage:
-              'Belum ada sidik jari/wajah tersimpan. Daftarkan di Pengaturan.',
-        );
-      case LocalAuthExceptionCode.lockedOut:
-        return BiometricException(
-          code: BiometricErrorCode.temporaryLockout,
-          message: e.message ?? '',
-          userMessage: 'Terlalu banyak percobaan. Terkunci sementara.',
-        );
-      case LocalAuthExceptionCode.permanentlyLockedOut:
-        return BiometricException(
-          code: BiometricErrorCode.biometricLockout,
-          message: e.message ?? '',
-          userMessage:
-              'Sensor terkunci permanen. Gunakan PIN/Password untuk membuka.',
-        );
-      default:
-        return BiometricException(
-          code: BiometricErrorCode.unknown,
-          message: e.message ?? '',
-          userMessage: 'Terjadi kesalahan biometrik yang tidak diketahui.',
-        );
+  factory BiometricException.fromLocalAuthException(dynamic e) {
+    // Membaca kode error sebagai string untuk kebal terhadap perubahan struktur SDK
+    final String errorCode = e.code.toString();
+
+    if (errorCode.contains('noBiometricHardware') ||
+        errorCode.contains('noHardware')) {
+      return BiometricException(
+        code: BiometricErrorCode.noBiometricHardware,
+        message: e.toString(),
+        userMessage: 'Perangkat tidak memiliki sensor biometrik.',
+      );
+    } else if (errorCode.contains('notEnrolled') ||
+        errorCode.contains('noBiometricsEnrolled')) {
+      return BiometricException(
+        code: BiometricErrorCode.notEnrolled,
+        message: e.toString(),
+        userMessage:
+            'Belum ada sidik jari/wajah tersimpan. Daftarkan di Pengaturan.',
+      );
+    } else if (errorCode.contains('lockedOut')) {
+      return BiometricException(
+        code: BiometricErrorCode.temporaryLockout,
+        message: e.toString(),
+        userMessage: 'Terlalu banyak percobaan. Terkunci sementara.',
+      );
+    } else if (errorCode.contains('permanentlyLockedOut')) {
+      return BiometricException(
+        code: BiometricErrorCode.biometricLockout,
+        message: e.toString(),
+        userMessage:
+            'Sensor terkunci permanen. Gunakan PIN/Password untuk membuka.',
+      );
+    } else {
+      return BiometricException(
+        code: BiometricErrorCode.unknown,
+        message: e.toString(),
+        userMessage: 'Terjadi kesalahan biometrik yang tidak diketahui.',
+      );
     }
   }
-
-  // --- Computed getters untuk Keputusan UI ---
 
   bool get isRetryable =>
       code == BiometricErrorCode.userCanceled ||

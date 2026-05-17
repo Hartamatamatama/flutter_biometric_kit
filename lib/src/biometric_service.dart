@@ -31,7 +31,7 @@ class BiometricService {
       if (!available) {
         throw BiometricException(
           code: BiometricErrorCode.noBiometricHardware,
-          message: 'Hardware not available or unsupported',
+          message: 'Hardware not available',
           userMessage:
               'Perangkat tidak memiliki atau tidak mendukung sensor biometrik.',
         );
@@ -47,6 +47,7 @@ class BiometricService {
         );
       }
 
+      // Menggunakan flat parameters persis seperti spesifikasi dokumen materi
       final bool result = await _auth.authenticate(
         localizedReason: reason,
         authMessages: const [
@@ -56,24 +57,20 @@ class BiometricService {
             signInHint: 'Tempelkan jari atau arahkan wajah',
           ),
         ],
-        options: const AuthenticationOptions(
-          biometricOnly: false,
-          sensitiveTransaction: true,
-          useErrorDialogs: true,
-          stickyAuth: true,
-        ),
+        biometricOnly: false,
+        sensitiveTransaction: true,
       );
 
       if (!result) {
         throw BiometricException(
           code: BiometricErrorCode.userCanceled,
-          message: 'Authentication canceled by user',
+          message: 'Canceled',
           userMessage: 'Autentikasi dibatalkan.',
         );
       }
 
       return true;
-    } on LocalAuthException catch (e) {
+    } catch (e) {
       throw BiometricException.fromLocalAuthException(e);
     }
   }
