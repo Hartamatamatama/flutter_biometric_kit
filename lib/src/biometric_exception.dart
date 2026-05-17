@@ -1,5 +1,4 @@
-import 'package:flutter/services.dart';
-import 'package:local_auth/error_codes.dart';
+import 'package:local_auth/local_auth.dart';
 
 // Enum internal untuk mengelompokkan jenis error
 enum BiometricErrorCode {
@@ -25,36 +24,34 @@ class BiometricException implements Exception {
   });
 
   // Pabrik konversi: Error OS -> Custom Model
-  factory BiometricException.fromLocalAuthException(PlatformException e) {
+  factory BiometricException.fromLocalAuthException(LocalAuthException e) {
     switch (e.code) {
-      case noHardware:
+      case LocalAuthExceptionCode.noBiometricHardware:
         return BiometricException(
           code: BiometricErrorCode.noBiometricHardware,
           message: e.message ?? '',
           userMessage: 'Perangkat tidak memiliki sensor biometrik.',
         );
-      case notEnrolled:
+      case LocalAuthExceptionCode.noBiometricsEnrolled:
         return BiometricException(
           code: BiometricErrorCode.notEnrolled,
           message: e.message ?? '',
           userMessage:
               'Belum ada sidik jari/wajah tersimpan. Daftarkan di Pengaturan.',
         );
-      case lockedOut:
+      case LocalAuthExceptionCode.lockedOut:
         return BiometricException(
           code: BiometricErrorCode.temporaryLockout,
           message: e.message ?? '',
           userMessage: 'Terlalu banyak percobaan. Terkunci sementara.',
         );
-      case permanentlyLockedOut:
+      case LocalAuthExceptionCode.permanentlyLockedOut:
         return BiometricException(
           code: BiometricErrorCode.biometricLockout,
           message: e.message ?? '',
           userMessage:
               'Sensor terkunci permanen. Gunakan PIN/Password untuk membuka.',
         );
-      // Di local_auth v3, user canceled sering kali tidak melempar error melainkan me-return false
-      // Namun kita tetap sediakan penangkapannya untuk berjaga-jaga
       default:
         return BiometricException(
           code: BiometricErrorCode.unknown,
@@ -66,16 +63,13 @@ class BiometricException implements Exception {
 
   // --- Computed getters untuk Keputusan UI ---
 
-  // Tampilkan tombol "Coba Lagi"?
   bool get isRetryable =>
       code == BiometricErrorCode.userCanceled ||
       code == BiometricErrorCode.systemCanceled ||
       code == BiometricErrorCode.unknown;
 
-  // Arahkan ke Pengaturan?
   bool get requiresSettings => code == BiometricErrorCode.notEnrolled;
 
-  // Lempar ke form Password/PIN manual?
   bool get requiresFallback =>
       code == BiometricErrorCode.noBiometricHardware ||
       code == BiometricErrorCode.biometricLockout;

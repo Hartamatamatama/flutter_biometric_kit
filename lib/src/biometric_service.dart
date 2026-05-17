@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'biometric_exception.dart';
@@ -6,7 +5,6 @@ import 'biometric_exception.dart';
 class BiometricService {
   final LocalAuthentication _auth = LocalAuthentication();
 
-  // 1. Cek Ketersediaan Hardware
   Future<bool> isBiometricAvailable() async {
     try {
       final bool canCheck = await _auth.canCheckBiometrics;
@@ -17,7 +15,6 @@ class BiometricService {
     }
   }
 
-  // 2. Ambil Daftar Biometrik yang Aktif
   Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _auth.getAvailableBiometrics();
@@ -26,12 +23,10 @@ class BiometricService {
     }
   }
 
-  // 3. Eksekusi Autentikasi Utama
   Future<bool> authenticate({
     String reason = 'Verifikasi dibutuhkan untuk membuka aplikasi',
   }) async {
     try {
-      // Pre-check 1: Ketersediaan Sensor
       final bool available = await isBiometricAvailable();
       if (!available) {
         throw BiometricException(
@@ -42,7 +37,6 @@ class BiometricService {
         );
       }
 
-      // Pre-check 2: Pendaftaran Sidik Jari/Wajah
       final List<BiometricType> types = await getAvailableBiometrics();
       if (types.isEmpty) {
         throw BiometricException(
@@ -53,7 +47,6 @@ class BiometricService {
         );
       }
 
-      // Memanggil Dialog Sensor Bawaan OS
       final bool result = await _auth.authenticate(
         localizedReason: reason,
         authMessages: const [
@@ -64,17 +57,13 @@ class BiometricService {
           ),
         ],
         options: const AuthenticationOptions(
-          biometricOnly:
-              false, // Mengizinkan fallback ke PIN/Pola HP jika biometrik gagal
-          sensitiveTransaction:
-              true, // Keamanan ketat: Menolak Face Unlock 2D (Class 2) yang mudah diretas
+          biometricOnly: false,
+          sensitiveTransaction: true,
           useErrorDialogs: true,
-          stickyAuth:
-              true, // Dialog tidak hilang jika ada panggilan masuk/notifikasi
+          stickyAuth: true,
         ),
       );
 
-      // Jika pengguna menekan tombol "Batal"
       if (!result) {
         throw BiometricException(
           code: BiometricErrorCode.userCanceled,
@@ -84,8 +73,7 @@ class BiometricService {
       }
 
       return true;
-    } on PlatformException catch (e) {
-      // Menerjemahkan error mentah dari OS menjadi pesan elegan
+    } on LocalAuthException catch (e) {
       throw BiometricException.fromLocalAuthException(e);
     }
   }
